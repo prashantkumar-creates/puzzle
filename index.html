@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Puzzle Solver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            min-height: 100vh;
+        }
+
+        nav {
+            margin: 20px 0;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        .nav-btn.active {
+            background-color: #45a049;
+            transform: scale(1.1);
+        }
+
+        .grid {
+            display: grid;
+            gap: 2px;
+            margin: 20px;
+        }
+
+        .cell {
+            width: 60px;
+            height: 60px;
+            text-align: center;
+            font-size: 24px;
+            border: 2px solid #999;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .controls {
+            margin: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin: 0 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        .number-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            display: none;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .number-btn {
+            width: 50px;
+            height: 50px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #fff;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 99;
+        }
+
+        .selected {
+            background-color: #e6f3ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grid Puzzle Solver</h1>
+    <nav>
+        <button class="nav-btn active" onclick="changeGridSize(3)">3x3</button>
+        <button class="nav-btn" onclick="changeGridSize(4)">4x4</button>
+        <button class="nav-btn" onclick="changeGridSize(5)">5x5</button>
+    </nav>
+    
+    <div class="grid" id="grid"></div>
+    
+    <div class="controls">
+        <button onclick="solvePuzzle()">Solve</button>
+        <button onclick="resetGrid()">Reset</button>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="number-popup" id="numberPopup"></div>
+
+    <script>
+        let currentCell = null;
+        let gridSize = 3;
+        let gridData = [];
+
+        function initializeGridData() {
+            gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+        }
+
+        function changeGridSize(size) {
+            gridSize = size;
+            document.querySelectorAll('.nav-btn').forEach(btn => 
+                btn.classList.remove('active'));
+            event.target.classList.add('active');
+            initializeGridData();
+            createGrid();
+        }
+
+        function createGrid() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 60px)`;
+            
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.textContent = '0';
+                cell.addEventListener('click', () => showNumberPopup(i));
+                grid.appendChild(cell);
+            }
+        }
+
+        function showNumberPopup(index) {
+            currentCell = index;
+            const popup = document.getElementById('numberPopup');
+            popup.innerHTML = '';
+            
+            // Create number buttons based on grid size
+            for (let num = 1; num <= gridSize; num++) {
+                const btn = document.createElement('div');
+                btn.className = 'number-btn';
+                btn.textContent = num;
+                btn.onclick = () => selectNumber(num);
+                popup.appendChild(btn);
+            }
+            
+            // Add clear button
+            const clearBtn = document.createElement('div');
+            clearBtn.className = 'number-btn';
+            clearBtn.textContent = '⌫';
+            clearBtn.onclick = () => selectNumber(0);
+            popup.appendChild(clearBtn);
+
+            document.getElementById('overlay').style.display = 'block';
+            popup.style.display = 'grid';
+            
+            document.querySelectorAll('.cell').forEach(cell => 
+                cell.classList.remove('selected'));
+            document.querySelectorAll('.cell')[index].classList.add('selected');
+        }
+
+        function selectNumber(num) {
+            const row = Math.floor(currentCell / gridSize);
+            const col = currentCell % gridSize;
+            gridData[row][col] = num;
+            document.querySelectorAll('.cell')[currentCell].textContent = num || '0';
+            closePopup();
+        }
+
+        function closePopup() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('numberPopup').style.display = 'none';
+            document.querySelectorAll('.cell').forEach(cell => 
+                cell.classList.remove('selected'));
+        }
+
+        function solvePuzzle() {
+            const puzzle = gridData.map(row => [...row]);
+            
+            if (solve(puzzle)) {
+                puzzle.forEach((row, i) => {
+                    row.forEach((num, j) => {
+                        gridData[i][j] = num;
+                        document.querySelectorAll('.cell')[i * gridSize + j].textContent = num;
+                    });
+                });
+            } else {
+                alert('No solution found!');
+            }
+        }
+
+        function solve(grid) {
+            const empty = findEmpty(grid);
+            if (!empty) return true;
+            
+            const [row, col] = empty;
+            
+            for (let num = 1; num <= gridSize; num++) {
+                if (isValid(grid, row, col, num)) {
+                    grid[row][col] = num;
+                    if (solve(grid)) return true;
+                    grid[row][col] = 0;
+                }
+            }
+            return false;
+        }
+
+        function findEmpty(grid) {
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    if (grid[i][j] === 0) return [i, j];
+                }
+            }
+            return null;
+        }
+
+        function isValid(grid, row, col, num) {
+            for (let i = 0; i < gridSize; i++) {
+                if (grid[row][i] === num || grid[i][col] === num) return false;
+            }
+            return true;
+        }
+
+        function resetGrid() {
+            initializeGridData();
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '0';
+            });
+        }
+
+        document.getElementById('overlay').addEventListener('click', closePopup);
+        initializeGridData();
+        createGrid();
+    </script>
+</body>
+</html>
