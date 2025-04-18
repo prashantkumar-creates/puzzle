@@ -137,7 +137,7 @@
         let gridData = [];
 
         function initializeGridData() {
-            gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            gridData = Array(gridSize).fill().map(() => Array(gridSize).fill(''));
         }
 
         function changeGridSize(size) {
@@ -157,7 +157,7 @@
             for (let i = 0; i < gridSize * gridSize; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
-                cell.textContent = '0';
+                cell.textContent = '';
                 cell.addEventListener('click', () => showNumberPopup(i));
                 grid.appendChild(cell);
             }
@@ -168,7 +168,7 @@
             const popup = document.getElementById('numberPopup');
             popup.innerHTML = '';
             
-            // Create number buttons based on grid size
+            // Create number buttons
             for (let num = 1; num <= gridSize; num++) {
                 const btn = document.createElement('div');
                 btn.className = 'number-btn';
@@ -195,8 +195,9 @@
         function selectNumber(num) {
             const row = Math.floor(currentCell / gridSize);
             const col = currentCell % gridSize;
-            gridData[row][col] = num;
-            document.querySelectorAll('.cell')[currentCell].textContent = num || '0';
+            const displayValue = num === 0 ? '' : num;
+            gridData[row][col] = num === 0 ? '' : num;
+            document.querySelectorAll('.cell')[currentCell].textContent = displayValue;
             closePopup();
         }
 
@@ -208,7 +209,10 @@
         }
 
         function solvePuzzle() {
-            const puzzle = gridData.map(row => [...row]);
+            // Convert empty strings to 0 for solving
+            const puzzle = gridData.map(row => 
+                row.map(cell => cell === '' ? 0 : parseInt(cell))
+            );
             
             if (solve(puzzle)) {
                 puzzle.forEach((row, i) => {
@@ -257,7 +261,7 @@
         function resetGrid() {
             initializeGridData();
             document.querySelectorAll('.cell').forEach(cell => {
-                cell.textContent = '0';
+                cell.textContent = '';
             });
         }
 
